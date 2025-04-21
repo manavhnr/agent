@@ -1,19 +1,19 @@
 'use client';
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 
 interface ProjectInputProps {
-  onSubmit: (prompt: string) => void;
+  onGenerate: (projectName: string) => void;
 }
 
-const ProjectInput: React.FC<ProjectInputProps> = ({ onSubmit }) => {
-  const [prompt, setPrompt] = useState('');
+export default function ProjectInput({ onGenerate }: ProjectInputProps) {
+  const [projectName, setProjectName] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (prompt.trim()) {
-      onSubmit(prompt);
+    if (projectName.trim()) {
+      onGenerate(projectName.trim());
     }
   };
 
@@ -21,37 +21,34 @@ const ProjectInput: React.FC<ProjectInputProps> = ({ onSubmit }) => {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 transition-colors duration-200"
+      transition={{ duration: 0.5 }}
+      className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6"
     >
-      <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-100 mb-4">
-        Start Your Hackathon Project
-      </h2>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label
-            htmlFor="prompt"
-            className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+            htmlFor="projectName"
+            className="block text-sm font-medium text-gray-700 dark:text-gray-300"
           >
-            Describe your project idea or requirements
+            Project Name
           </label>
-          <textarea
-            id="prompt"
-            rows={4}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-gray-100 transition-colors duration-200"
-            placeholder="Enter your project description, requirements, or any specific topics you want to focus on..."
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
+          <input
+            type="text"
+            id="projectName"
+            value={projectName}
+            onChange={(e) => setProjectName(e.target.value)}
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
+            placeholder="Enter your project name"
+            required
           />
         </div>
         <button
           type="submit"
-          className="w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors dark:focus:ring-offset-gray-800"
+          className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-blue-500 dark:hover:bg-blue-600"
         >
           Generate Project
         </button>
       </form>
     </motion.div>
   );
-};
-
-export default ProjectInput; 
+} 

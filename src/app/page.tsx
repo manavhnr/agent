@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import { useState } from 'react';
+import { motion } from 'framer-motion';
 import Layout from '@/components/Layout';
 import ProjectInput from '@/components/ProjectInput';
 import ProblemList from '@/components/ProblemList';
@@ -8,256 +9,133 @@ import GenerationProgress from '@/components/GenerationProgress';
 import ProjectResult from '@/components/ProjectResult';
 import toast from 'react-hot-toast';
 
-interface Problem {
-  id: string;
-  title: string;
-  description: string;
-  importance: number;
-  potency: number;
-}
-
-interface Step {
-  id: string;
-  name: string;
-  status: 'pending' | 'in-progress' | 'completed';
-}
-
-const generateProblems = (prompt: string): Problem[] => {
-  // Extract keywords from the prompt
-  const keywords = prompt.toLowerCase().split(' ').filter(word => word.length > 3);
-  
-  // Define problem categories based on keywords
-  const categories = {
-    healthcare: ['health', 'medical', 'doctor', 'patient', 'disease', 'hospital'],
-    education: ['education', 'learn', 'school', 'student', 'teacher', 'class'],
-    environment: ['environment', 'climate', 'sustainable', 'green', 'energy', 'waste'],
-    technology: ['tech', 'software', 'app', 'digital', 'internet', 'data'],
-    finance: ['finance', 'money', 'bank', 'payment', 'investment', 'budget'],
-    social: ['social', 'community', 'people', 'society', 'welfare', 'help']
-  };
-
-  // Find relevant categories
-  const relevantCategories = Object.entries(categories)
-    .filter(([_, keywords]) => keywords.some(k => prompt.toLowerCase().includes(k)))
-    .map(([category]) => category);
-
-  // Generate problems based on relevant categories
-  const problems: Problem[] = [];
-  
-  if (relevantCategories.includes('healthcare')) {
-    problems.push({
-      id: '1',
-      title: 'AI-Powered Healthcare Diagnosis',
-      description: 'Develop a machine learning model to assist in early disease detection and diagnosis, improving healthcare accessibility.',
-      importance: 95,
-      potency: 90,
-    });
-  }
-  
-  if (relevantCategories.includes('education')) {
-    problems.push({
-      id: '2',
-      title: 'Personalized Learning Platform',
-      description: 'Create an adaptive learning system that customizes educational content based on individual student needs and learning styles.',
-      importance: 92,
-      potency: 88,
-    });
-  }
-  
-  if (relevantCategories.includes('environment')) {
-    problems.push({
-      id: '3',
-      title: 'Sustainable Energy Management',
-      description: 'Develop a smart grid system to optimize energy consumption and reduce waste in residential and commercial buildings.',
-      importance: 94,
-      potency: 89,
-    });
-  }
-  
-  if (relevantCategories.includes('technology')) {
-    problems.push({
-      id: '4',
-      title: 'Digital Accessibility Solutions',
-      description: 'Build tools to make digital content more accessible for people with disabilities, ensuring equal access to information.',
-      importance: 90,
-      potency: 85,
-    });
-  }
-  
-  if (relevantCategories.includes('finance')) {
-    problems.push({
-      id: '5',
-      title: 'Financial Literacy Platform',
-      description: 'Create an interactive platform to improve financial literacy and help people make better financial decisions.',
-      importance: 88,
-      potency: 87,
-    });
-  }
-  
-  if (relevantCategories.includes('social')) {
-    problems.push({
-      id: '6',
-      title: 'Community Support Network',
-      description: 'Develop a platform connecting people in need with volunteers and resources in their local community.',
-      importance: 93,
-      potency: 86,
-    });
-  }
-
-  // If no specific categories match, generate general problems based on keywords
-  if (problems.length === 0) {
-    problems.push(
-      {
-        id: '7',
-        title: 'AI-Powered Research Assistant',
-        description: 'Create a tool that helps researchers analyze and synthesize information from multiple sources efficiently.',
-        importance: 91,
-        potency: 88,
-      },
-      {
-        id: '8',
-        title: 'Smart Task Management System',
-        description: 'Develop an intelligent system that helps users organize and prioritize their tasks based on importance and deadlines.',
-        importance: 89,
-        potency: 87,
-      }
-    );
-  }
-
-  // Sort problems by importance and potency
-  return problems.sort((a, b) => {
-    const scoreA = (a.importance + a.potency) / 2;
-    const scoreB = (b.importance + b.potency) / 2;
-    return scoreB - scoreA;
-  });
-};
-
 export default function Home() {
-  const [problems, setProblems] = useState<Problem[]>([]);
-  const [selectedProblem, setSelectedProblem] = useState<Problem | null>(null);
-  const [steps, setSteps] = useState<Step[]>([
-    { id: '1', name: 'Research Agent', status: 'pending' },
-    { id: '2', name: 'Presentation Agent', status: 'pending' },
-    { id: '3', name: 'ML Agent', status: 'pending' },
-    { id: '4', name: 'Frontend Agent', status: 'pending' },
-    { id: '5', name: 'Backend Agent', status: 'pending' },
-    { id: '6', name: 'Code Agent', status: 'pending' },
-    { id: '7', name: 'Reviewer Agent', status: 'pending' },
-    { id: '8', name: 'Script Agent', status: 'pending' },
-  ]);
-  const [projectResult, setProjectResult] = useState<{
-    presentationUrl?: string;
-    projectUrl?: string;
-    videoScript?: string;
-  } | null>(null);
+  const [selectedProblem, setSelectedProblem] = useState<string | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generatedProject, setGeneratedProject] = useState<any>(null);
+  const [generationProgress, setGenerationProgress] = useState(0);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleProjectSubmit = async (prompt: string) => {
+  const handleProblemSelect = (problemId: string) => {
+    setSelectedProblem(problemId);
+    setError(null);
+  };
+
+  const handleGenerate = async (projectName: string) => {
+    if (!selectedProblem) {
+      toast.error('Please select a problem first');
+      return;
+    }
+
+    setIsGenerating(true);
+    setGenerationProgress(0);
+    setGeneratedProject(null);
+    setError(null);
+
     try {
-      setProjectResult(null);
-      setSelectedProblem(null);
-      setProblems([]);
-      
-      // Update Research Agent status
-      setSteps((prev) =>
-        prev.map((step) =>
-          step.id === '1' ? { ...step, status: 'in-progress' } : step
-        )
-      );
+      // Simulate project generation progress
+      const progressInterval = setInterval(() => {
+        setGenerationProgress((prev) => {
+          if (prev >= 100) {
+            clearInterval(progressInterval);
+            return 100;
+          }
+          return prev + 10;
+        });
+      }, 1000);
 
-      // Simulate API call to research agent
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      // Call the API to generate the project
+      const response = await fetch('/api/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          problemId: selectedProblem,
+          projectName,
+        }),
+      });
 
-      // Generate problems based on the prompt
-      const generatedProblems = generateProblems(prompt);
-      setProblems(generatedProblems);
-      
-      setSteps((prev) =>
-        prev.map((step) =>
-          step.id === '1' ? { ...step, status: 'completed' } : step
-        )
-      );
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to generate project');
+      }
 
-      toast.success('Research completed! Please select a problem to proceed.');
+      const data = await response.json();
+      clearInterval(progressInterval);
+      setGenerationProgress(100);
+      setGeneratedProject(data);
+      toast.success('Project generated successfully!');
+
     } catch (error) {
-      toast.error('Failed to process your request. Please try again.');
+      console.error('Error generating project:', error);
+      setError(error instanceof Error ? error.message : 'Failed to generate project');
+      toast.error(error instanceof Error ? error.message : 'Failed to generate project');
+    } finally {
+      setIsGenerating(false);
     }
   };
 
-  const handleProblemSelect = async (problem: Problem) => {
-    setSelectedProblem(problem);
-    toast.success(`Selected: ${problem.title}`);
-
-    // Update remaining steps
-    for (let i = 2; i <= 8; i++) {
-      setSteps((prev) =>
-        prev.map((step) =>
-          step.id === i.toString() ? { ...step, status: 'in-progress' } : step
-        )
-      );
-
-      // Simulate processing time
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      setSteps((prev) =>
-        prev.map((step) =>
-          step.id === i.toString() ? { ...step, status: 'completed' } : step
-        )
-      );
-    }
-
-    // Generate project result
-    setProjectResult({
-      presentationUrl: `/presentations/${problem.id}.pdf`,
-      projectUrl: `/projects/${problem.id}`,
-      videoScript: `Video Script for ${problem.title}:
-
-1. Introduction (30 seconds)
-- Introduce the problem: ${problem.description}
-- Explain why this problem is important
-- State the solution we're proposing
-
-2. Solution Overview (1 minute)
-- Present the main features of our solution
-- Show how it addresses the problem
-- Highlight key technical aspects
-
-3. Technical Implementation (1 minute)
-- Explain the architecture
-- Show key code snippets
-- Demonstrate the working prototype
-
-4. Impact and Future (30 seconds)
-- Discuss potential impact
-- Outline future improvements
-- Call to action for users
-
-Remember to:
-- Speak clearly and confidently
-- Use visual aids effectively
-- Maintain good posture and eye contact
-- Keep within the 3-minute time limit`,
-    });
-
-    toast.success('Project generation completed!');
+  const handleReset = () => {
+    setSelectedProblem(null);
+    setGeneratedProject(null);
+    setGenerationProgress(0);
+    setError(null);
   };
 
   return (
     <Layout>
-      <div className="space-y-8">
-        {!selectedProblem && <ProjectInput onSubmit={handleProjectSubmit} />}
-        
-        {problems.length > 0 && !selectedProblem && (
-          <ProblemList problems={problems} onSelectProblem={handleProblemSelect} />
-        )}
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+        <div className="container mx-auto px-4 py-8">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="max-w-4xl mx-auto"
+          >
+            <h1 className="text-4xl font-bold text-center mb-8 text-gray-900 dark:text-white">
+              Hackathon Automator
+            </h1>
+            
+            <ProjectInput onGenerate={handleGenerate} />
+            
+            <div className="mt-8">
+              <ProblemList
+                selectedProblem={selectedProblem}
+                onSelect={handleProblemSelect}
+              />
+            </div>
 
-        {selectedProblem && !projectResult && <GenerationProgress steps={steps} />}
+            {isGenerating && (
+              <div className="mt-8">
+                <GenerationProgress progress={generationProgress} />
+              </div>
+            )}
 
-        {selectedProblem && projectResult && (
-          <ProjectResult
-            problem={selectedProblem}
-            {...projectResult}
-          />
-        )}
+            {error && (
+              <div className="mt-8 p-4 bg-red-100 dark:bg-red-900 rounded-lg">
+                <p className="text-red-700 dark:text-red-100">{error}</p>
+                <button
+                  onClick={handleReset}
+                  className="mt-4 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                >
+                  Try Again
+                </button>
+              </div>
+            )}
+
+            {generatedProject && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+                className="mt-8"
+              >
+                <ProjectResult project={generatedProject} />
+              </motion.div>
+            )}
+          </motion.div>
+        </div>
       </div>
     </Layout>
   );
