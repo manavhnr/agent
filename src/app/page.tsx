@@ -1,103 +1,264 @@
-import Image from "next/image";
+'use client';
+
+import React, { useState } from 'react';
+import Layout from '@/components/Layout';
+import ProjectInput from '@/components/ProjectInput';
+import ProblemList from '@/components/ProblemList';
+import GenerationProgress from '@/components/GenerationProgress';
+import ProjectResult from '@/components/ProjectResult';
+import toast from 'react-hot-toast';
+
+interface Problem {
+  id: string;
+  title: string;
+  description: string;
+  importance: number;
+  potency: number;
+}
+
+interface Step {
+  id: string;
+  name: string;
+  status: 'pending' | 'in-progress' | 'completed';
+}
+
+const generateProblems = (prompt: string): Problem[] => {
+  // Extract keywords from the prompt
+  const keywords = prompt.toLowerCase().split(' ').filter(word => word.length > 3);
+  
+  // Define problem categories based on keywords
+  const categories = {
+    healthcare: ['health', 'medical', 'doctor', 'patient', 'disease', 'hospital'],
+    education: ['education', 'learn', 'school', 'student', 'teacher', 'class'],
+    environment: ['environment', 'climate', 'sustainable', 'green', 'energy', 'waste'],
+    technology: ['tech', 'software', 'app', 'digital', 'internet', 'data'],
+    finance: ['finance', 'money', 'bank', 'payment', 'investment', 'budget'],
+    social: ['social', 'community', 'people', 'society', 'welfare', 'help']
+  };
+
+  // Find relevant categories
+  const relevantCategories = Object.entries(categories)
+    .filter(([_, keywords]) => keywords.some(k => prompt.toLowerCase().includes(k)))
+    .map(([category]) => category);
+
+  // Generate problems based on relevant categories
+  const problems: Problem[] = [];
+  
+  if (relevantCategories.includes('healthcare')) {
+    problems.push({
+      id: '1',
+      title: 'AI-Powered Healthcare Diagnosis',
+      description: 'Develop a machine learning model to assist in early disease detection and diagnosis, improving healthcare accessibility.',
+      importance: 95,
+      potency: 90,
+    });
+  }
+  
+  if (relevantCategories.includes('education')) {
+    problems.push({
+      id: '2',
+      title: 'Personalized Learning Platform',
+      description: 'Create an adaptive learning system that customizes educational content based on individual student needs and learning styles.',
+      importance: 92,
+      potency: 88,
+    });
+  }
+  
+  if (relevantCategories.includes('environment')) {
+    problems.push({
+      id: '3',
+      title: 'Sustainable Energy Management',
+      description: 'Develop a smart grid system to optimize energy consumption and reduce waste in residential and commercial buildings.',
+      importance: 94,
+      potency: 89,
+    });
+  }
+  
+  if (relevantCategories.includes('technology')) {
+    problems.push({
+      id: '4',
+      title: 'Digital Accessibility Solutions',
+      description: 'Build tools to make digital content more accessible for people with disabilities, ensuring equal access to information.',
+      importance: 90,
+      potency: 85,
+    });
+  }
+  
+  if (relevantCategories.includes('finance')) {
+    problems.push({
+      id: '5',
+      title: 'Financial Literacy Platform',
+      description: 'Create an interactive platform to improve financial literacy and help people make better financial decisions.',
+      importance: 88,
+      potency: 87,
+    });
+  }
+  
+  if (relevantCategories.includes('social')) {
+    problems.push({
+      id: '6',
+      title: 'Community Support Network',
+      description: 'Develop a platform connecting people in need with volunteers and resources in their local community.',
+      importance: 93,
+      potency: 86,
+    });
+  }
+
+  // If no specific categories match, generate general problems based on keywords
+  if (problems.length === 0) {
+    problems.push(
+      {
+        id: '7',
+        title: 'AI-Powered Research Assistant',
+        description: 'Create a tool that helps researchers analyze and synthesize information from multiple sources efficiently.',
+        importance: 91,
+        potency: 88,
+      },
+      {
+        id: '8',
+        title: 'Smart Task Management System',
+        description: 'Develop an intelligent system that helps users organize and prioritize their tasks based on importance and deadlines.',
+        importance: 89,
+        potency: 87,
+      }
+    );
+  }
+
+  // Sort problems by importance and potency
+  return problems.sort((a, b) => {
+    const scoreA = (a.importance + a.potency) / 2;
+    const scoreB = (b.importance + b.potency) / 2;
+    return scoreB - scoreA;
+  });
+};
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [problems, setProblems] = useState<Problem[]>([]);
+  const [selectedProblem, setSelectedProblem] = useState<Problem | null>(null);
+  const [steps, setSteps] = useState<Step[]>([
+    { id: '1', name: 'Research Agent', status: 'pending' },
+    { id: '2', name: 'Presentation Agent', status: 'pending' },
+    { id: '3', name: 'ML Agent', status: 'pending' },
+    { id: '4', name: 'Frontend Agent', status: 'pending' },
+    { id: '5', name: 'Backend Agent', status: 'pending' },
+    { id: '6', name: 'Code Agent', status: 'pending' },
+    { id: '7', name: 'Reviewer Agent', status: 'pending' },
+    { id: '8', name: 'Script Agent', status: 'pending' },
+  ]);
+  const [projectResult, setProjectResult] = useState<{
+    presentationUrl?: string;
+    projectUrl?: string;
+    videoScript?: string;
+  } | null>(null);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
+  const handleProjectSubmit = async (prompt: string) => {
+    try {
+      setProjectResult(null);
+      setSelectedProblem(null);
+      setProblems([]);
+      
+      // Update Research Agent status
+      setSteps((prev) =>
+        prev.map((step) =>
+          step.id === '1' ? { ...step, status: 'in-progress' } : step
+        )
+      );
+
+      // Simulate API call to research agent
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+
+      // Generate problems based on the prompt
+      const generatedProblems = generateProblems(prompt);
+      setProblems(generatedProblems);
+      
+      setSteps((prev) =>
+        prev.map((step) =>
+          step.id === '1' ? { ...step, status: 'completed' } : step
+        )
+      );
+
+      toast.success('Research completed! Please select a problem to proceed.');
+    } catch (error) {
+      toast.error('Failed to process your request. Please try again.');
+    }
+  };
+
+  const handleProblemSelect = async (problem: Problem) => {
+    setSelectedProblem(problem);
+    toast.success(`Selected: ${problem.title}`);
+
+    // Update remaining steps
+    for (let i = 2; i <= 8; i++) {
+      setSteps((prev) =>
+        prev.map((step) =>
+          step.id === i.toString() ? { ...step, status: 'in-progress' } : step
+        )
+      );
+
+      // Simulate processing time
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      setSteps((prev) =>
+        prev.map((step) =>
+          step.id === i.toString() ? { ...step, status: 'completed' } : step
+        )
+      );
+    }
+
+    // Generate project result
+    setProjectResult({
+      presentationUrl: `/presentations/${problem.id}.pdf`,
+      projectUrl: `/projects/${problem.id}`,
+      videoScript: `Video Script for ${problem.title}:
+
+1. Introduction (30 seconds)
+- Introduce the problem: ${problem.description}
+- Explain why this problem is important
+- State the solution we're proposing
+
+2. Solution Overview (1 minute)
+- Present the main features of our solution
+- Show how it addresses the problem
+- Highlight key technical aspects
+
+3. Technical Implementation (1 minute)
+- Explain the architecture
+- Show key code snippets
+- Demonstrate the working prototype
+
+4. Impact and Future (30 seconds)
+- Discuss potential impact
+- Outline future improvements
+- Call to action for users
+
+Remember to:
+- Speak clearly and confidently
+- Use visual aids effectively
+- Maintain good posture and eye contact
+- Keep within the 3-minute time limit`,
+    });
+
+    toast.success('Project generation completed!');
+  };
+
+  return (
+    <Layout>
+      <div className="space-y-8">
+        {!selectedProblem && <ProjectInput onSubmit={handleProjectSubmit} />}
+        
+        {problems.length > 0 && !selectedProblem && (
+          <ProblemList problems={problems} onSelectProblem={handleProblemSelect} />
+        )}
+
+        {selectedProblem && !projectResult && <GenerationProgress steps={steps} />}
+
+        {selectedProblem && projectResult && (
+          <ProjectResult
+            problem={selectedProblem}
+            {...projectResult}
           />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+        )}
+      </div>
+    </Layout>
   );
 }
